@@ -15,13 +15,12 @@ class Card:
         self.face = f"{self.num_string}{self.suit}"
 
 class Player:
-    def __init__(self, name, debug):
+    def __init__(self, name):
         self.name = name
         self.unplayed_cards = []
         self.played_cards = []
         self.discards = []
         self.loser = False
-        self.debug = debug
 
     def deal(self):
         if len(self.unplayed_cards) == 0:
@@ -31,7 +30,7 @@ class Player:
             random.shuffle(self.discards)
             self.unplayed_cards = self.discards
             self.discards = []
-        
+
         self.played_cards.append(self.unplayed_cards[0])
         self.unplayed_cards.pop(0)
         return True
@@ -46,17 +45,17 @@ class Player:
     def last_played_card(self):
         return self.played_cards[len(self.played_cards)-1]
 
-    def display_played_card(self, warMode):
-        if (warMode): print("\tface down card")
-        else: 
-            print(f"{self.name}: {self.last_played_card().face}")
-            print('┌───────┐')
-            print(f'| {self.last_played_card().num_string}    |')
-            print('|       |')
-            print(f'|   {self.last_played_card().suit}   |')
-            print('|       |')
-            print(f'|    {self.last_played_card().num_string} |')
-            print('└───────┘') 
+    # def display_played_card(self, warMode):
+    #     if (warMode): print("\tface down card")
+    #     else: 
+    #         print(f"{self.name}: {self.last_played_card().face}")
+    #         print('┌───────┐')
+    #         print(f'| {self.last_played_card().num_string}    |')
+    #         print('|       |')
+    #         print(f'|   {self.last_played_card().suit}   |')
+    #         print('|       |')
+    #         print(f'|    {self.last_played_card().num_string} |')
+    #         print('└───────┘') 
 
     def display_status(self):
         card_count = len(self.unplayed_cards) + len(self.discards)
@@ -65,22 +64,21 @@ class Player:
         print(f"{self.name} has {card_count} card{plural}")
 
 class Game:
-    def __init__(self, debug):
-        self.player1 = Player("Player 1", debug)
-        self.player2 = Player("Player 2", debug)
+    def __init__(self):
+        self.player1 = None
+        self.player2 = None
         self.warMode = False
-        self.debug = debug
 
     def startGame(self):
-        print()
-        print("Welcome to WAR!")
-        print("Instructions:")
-        print("Press any ENTER to start a new round (Q to Quit)...")
+        print("\nWelcome to WAR!")
+        print("Press ENTER to start a new round (Q to Quit)...")        
+
+        self.player1 = Player("Player 1")
+        self.player2 = Player("Player 2")
 
         if input().lower() == "q": return
 
         cards = []
-        #suits = ["Hearts", "Diamonds", "Spades", "Clubs"]
         suits = ["♥","♦","♣","♠"]
         for s in range(len(suits)):
             for n in range(2, 15):
@@ -91,21 +89,32 @@ class Game:
                 self.player1.unplayed_cards.append(cards[i])
             else:
                 self.player2.unplayed_cards.append(cards[i])
+
         if not self.play(): return
         self.startGame()
 
+    def fightWar(self, player):
+        for i in range (3):            
+            if not player.deal(): return False
+        return True  
+
     def play(self):
         while True:
+            warDisplay = self.warMode
             if self.warMode:
-                print("\n*** WAR!!! ***")
-                player1_lost = not self.fightWar(self.player1)
-                player2_lost = not self.fightWar(self.player2)
-                if player1_lost or player2_lost:
-                    self.printLostGame()
-                    break
+                print()
+                print("*"*50)
+                print("   WAR!!!")
+                print("*"*50)
+                print()
+                self.fightWar(self.player1)
+                self.fightWar(self.player2)
                 self.warMode = False
-
-            if not self.deal(): break
+                if self.player1.loser or self.player2.loser:
+                    self.printLostGame()
+                    break                
+            
+            if not self.deal(warDisplay): break
 
             winner = None
             cardCount = len(self.player1.played_cards)
@@ -124,6 +133,7 @@ class Game:
             if cardCount == 1: plural = ""
             print()
             print(f"{winner.name} won {cardCount} card{plural}!  [ Q:Quit | S:Status ]")
+            print("*"*50)
             userInput = input().lower()
             if userInput == "q": return False
             elif userInput == "s":
@@ -134,18 +144,21 @@ class Game:
         print("*" * 50)
         return True
                     
-    def deal(self):
-        player1_lost = not self.player1.deal()
-        player2_lost = not self.player2.deal()
+    def deal(self, warDisplay):
+        self.player1.deal()
+        self.player2.deal()
 
-        if not player1_lost and not player2_lost: 
-            #self.player1.display_played_card(self.warMode)
-            #self.player2.display_played_card(self.warMode)
+        if self.player1.loser or self.player2.loser:
+            self.printLostGame()    
+            return False          
+
+        if warDisplay:
+            self.displayWar(self.player1)
+            self.displayWar(self.player2)
+        else: 
             self.displayCards()
-            return True
-            
-        self.printLostGame()    
-        return False
+        return True
+ 
 
     def displayCards(self):
         card1 = self.player1.last_played_card()
@@ -159,14 +172,16 @@ class Game:
         print(f'|    {card1.num_string} |     |    {card2.num_string} |')
         print('└───────┘     └───────┘') 
 
-
-    def fightWar(self,player):
-        print(player.name + ":")
-        for i in range (3):            
-            if not player.deal(): return False
-            player.display_played_card(True)
-        print()
-        return True  
+    def displayWar(self, player):
+        card = player.last_played_card()
+        print(player.name)
+        print('\t┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐')
+        print(f'\t|       |  |       |  |       |  | {card.num_string}    |')
+        print('\t|       |  |       |  |       |  |       |')
+        print(f'\t|       |  |       |  |       |  |   {card.suit}   |')
+        print('\t|       |  |       |  |       |  |       |')
+        print(f'\t|       |  |       |  |       |  |    {card.num_string} |')
+        print('\t└───────┘  └───────┘  └───────┘  └───────┘')
 
     def printLostGame(self):
         if self.player1.loser and self.player2.loser:
@@ -188,6 +203,5 @@ class Game:
         return input().lower() != "q"
 
 if __name__ == '__main__':
-    debug = True
-    game = Game(debug)
+    game = Game()
     game.startGame()
