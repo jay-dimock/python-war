@@ -136,7 +136,7 @@ class Game:
         print("*" * 50)
         return True
                     
-    def deal(self, war_dDisplay):
+    def deal(self, war_display):
         self.player1.deal()
         self.player2.deal()
 
